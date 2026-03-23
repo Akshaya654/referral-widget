@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Employee Referral</title>
+  <script src="https://js.zohostatic.com/people/v1/peopleapp.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 24px; background: #f5f5f5; }
+    .card { background: white; padding: 24px; border-radius: 8px; max-width: 600px; margin: auto; }
+    h2 { margin-bottom: 20px; color: #333; }
+    label { display: block; font-size: 13px; color: #555; margin-bottom: 4px; margin-top: 14px; }
+    input, select { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box; }
+    button { margin-top: 20px; background: #0066cc; color: white; border: none; padding: 10px 24px; border-radius: 4px; font-size: 14px; cursor: pointer; width: 100%; }
+    button:hover { background: #0052a3; }
+    .msg { margin-top: 14px; font-size: 13px; text-align: center; }
+    .success { color: green; }
+    .error { color: red; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h2>Employee Referral Form</h2>
+
+  <label>Candidate Name *</label>
+  <input type="text" id="candidate_name" placeholder="Full name of candidate" />
+
+  <label>Email *</label>
+  <input type="email" id="email" placeholder="candidate@email.com" />
+
+  <label>Phone *</label>
+  <input type="text" id="phone" placeholder="10 digit mobile number" />
+
+  <label>Position Referred For *</label>
+  <select id="position">
+    <option value="">-- Loading positions... --</option>
+  </select>
+
+  <label>Your Email (Referrer) *</label>
+  <input type="email" id="referrer_email" placeholder="your@email.com" />
+
+  <button onclick="submitReferral()">Submit Referral</button>
+  <div class="msg" id="msg"></div>
+</div>
+
+<script>
+  var selectedJobId = "";
+  var selectedJobName = "";
+
+  // Load job openings on page load
+  window.onload = function() {
+    ZOHO.PEOPLE.invoke("GetJobOpenings", {}).then(function(response) {
+      var jobs = JSON.parse(response.replace(/\{/g,'{"').replace(/=/g,'":"').replace(/\}/g,'"}').replace(/",\s*"/g,'","'));
+      // safer parse below
+    }).catch(function(e) {
+      // fallback: call via People API
+      fetch("/api/v2/forms/P_StandAloneFunction?methodname=GetJobOpenings")
+        .then(r => r.json())
+        .then(data => populateJobs(data))
+        .catch(err => console.log(err));
+    });
+
+    // Direct API call approach
+    loadJobs();
+  };
+
+  function loadJobs() {
+    ZOHO.PEOPLE.invoke("GetJobOpenings", {}).then(function(data) {
+      populateJobs(data);
+    });
+  }
+
+  function populateJobs(data) {
+    var select = document.getElementById("position");
+    select.innerHTML = '<option value="">-- Select Position --</option>';
+    try {
+      var jobs = typeof data === "string" ? JSON.parse(data) : data;
+      jobs.forEach(function(job) {
+        var opt = document.createElement("option");
+        opt.value = job.id;
+        opt.text = job.name;
+        select.appendChild(opt);
+      });
+    } catch(e) {
+      select.innerHTML = '<option value="">-- Could not load positions --</option>';
+    }
+  }
+
+  function submitReferral() {
+    var name = document.getElementById("candidate_name").value.trim();
+    var email = document.getElementById("email").value.trim();
+    var phone = document.getElementById("phone").value.trim();
+    var positionSelect = document.getElementById("position");
+    var positionName = positionSelect.options[positionSelect.selectedIndex].text;
+    var positionId = positionSelect.value;
+    var referrerEmail = document.getElementById("referrer_email").value.trim();
+    var msg = document.getElementById("msg");
+
+    if(!name || !email || !phone || !positionId || !referrerEmail) {
+      msg.className = "msg error";
+      msg.innerText = "Please fill all fields.";
+      return;
+    }
+
+    msg.className = "msg";
+    msg.innerText = "Submitting...";
+
+    ZOHO.PEOPLE.invoke("referralToRecruit", {
+      First_Name: name,
+      Email: email,
+      Phone_Number: phone,
+      Position_referred_for: positionName,
+      AddedBy: referrerEmail,
+      ReferrerEmail: referrerEmail
+    }).then(function(response) {
+      msg.className = "msg success";
+      msg.innerText = "Referral submitted successfully!";
+      document.getElementById("candidate_name").value = "";
+      document.getElementById("email").value = "";
+      document.getElementById("phone").value = "";
+      document.getElementById("referrer_email").value = "";
+      document.getElementById("position").selectedIndex = 0;
+    }).catch(function(err) {
+      msg.className = "msg error";
+      msg.innerText = "Something went wrong. Please try again.";
+    });
+  }
+</script>
+</body>
+</html>
