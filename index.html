@@ -44,34 +44,36 @@
 <script>
   window.onload = function() {
     var urlParams = new URLSearchParams(window.location.search);
-    
-    // Pre-fill referrer email
+
+    // Pre-fill referrer email from URL
     var referrerEmail = urlParams.get('email');
     if (referrerEmail) {
-        document.getElementById("referrer_email").value = referrerEmail;
+      document.getElementById("referrer_email").value = decodeURIComponent(referrerEmail);
     }
 
     // Load jobs from URL parameter
     var jobsParam = urlParams.get('jobs');
     var select = document.getElementById("position");
-    
+
     if (jobsParam) {
-        select.innerHTML = '<option value="">-- Select Position --</option>';
-        var jobs = jobsParam.split(',');
-        jobs.forEach(function(job) {
-            job = job.replace(/[\[\]]/g, '').trim();
-            var parts = job.split('|');
-            if (parts.length === 2) {
-                var opt = document.createElement("option");
-                opt.value = parts[1].trim();
-                opt.text = parts[0].trim();
-                select.appendChild(opt);
-            }
-        });
+      select.innerHTML = '<option value="">-- Select Position --</option>';
+      var decoded = decodeURIComponent(jobsParam);
+      decoded = decoded.replace(/^\[/, '').replace(/\]$/, '');
+      var jobs = decoded.split(',');
+      jobs.forEach(function(job) {
+        job = job.trim();
+        var parts = job.split('|');
+        if (parts.length === 2) {
+          var opt = document.createElement("option");
+          opt.value = parts[1].trim();
+          opt.text = parts[0].trim();
+          select.appendChild(opt);
+        }
+      });
     } else {
-        select.innerHTML = '<option value="">-- No positions available --</option>';
+      select.innerHTML = '<option value="">-- No positions available --</option>';
     }
-};
+  };
 
   function submitReferral() {
     var name = document.getElementById("candidate_name").value.trim();
