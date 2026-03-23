@@ -44,40 +44,34 @@
 <script>
   window.onload = function() {
     var urlParams = new URLSearchParams(window.location.search);
+    
+    // Pre-fill referrer email
     var referrerEmail = urlParams.get('email');
     if (referrerEmail) {
-      document.getElementById("referrer_email").value = referrerEmail;
+        document.getElementById("referrer_email").value = referrerEmail;
     }
 
-    fetch("https://people.zoho.in/api/v2/forms/P_StandAloneFunction?methodname=GetJobOpenings", {
-      method: "GET",
-      credentials: "include"
-    })
-    .then(function(response) { return response.json(); })
-    .then(function(data) {
-      var select = document.getElementById("position");
-      select.innerHTML = '<option value="">-- Select Position --</option>';
-      try {
-        var jobs = typeof data === "string" ? JSON.parse(data) : data;
-        if (Array.isArray(jobs) && jobs.length > 0) {
-          jobs.forEach(function(job) {
-            var opt = document.createElement("option");
-            opt.value = job.id;
-            opt.text = job.name;
-            select.appendChild(opt);
-          });
-        } else {
-          select.innerHTML = '<option value="">-- No open positions found --</option>';
-        }
-      } catch(e) {
-        select.innerHTML = '<option value="">-- Error loading positions --</option>';
-      }
-    })
-    .catch(function() {
-      document.getElementById("position").innerHTML =
-        '<option value="">-- Could not load positions --</option>';
-    });
-  };
+    // Load jobs from URL parameter
+    var jobsParam = urlParams.get('jobs');
+    var select = document.getElementById("position");
+    
+    if (jobsParam) {
+        select.innerHTML = '<option value="">-- Select Position --</option>';
+        var jobs = jobsParam.split(',');
+        jobs.forEach(function(job) {
+            job = job.replace(/[\[\]]/g, '').trim();
+            var parts = job.split('|');
+            if (parts.length === 2) {
+                var opt = document.createElement("option");
+                opt.value = parts[1].trim();
+                opt.text = parts[0].trim();
+                select.appendChild(opt);
+            }
+        });
+    } else {
+        select.innerHTML = '<option value="">-- No positions available --</option>';
+    }
+};
 
   function submitReferral() {
     var name = document.getElementById("candidate_name").value.trim();
